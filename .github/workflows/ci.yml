@@ -56,11 +56,12 @@ jobs:
 
   notify:
     runs-on: ubuntu-latest
-    # needs: [lint, test, version-check]
+    # needs: [approval]
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
       issues: write
+      pull-requests: write
     steps:
       - uses: actions/github-script@v7
         with:

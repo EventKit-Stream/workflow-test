@@ -33,23 +33,40 @@ jobs:
           file-name: package.json
           token: ${{ github.TOKEN }}
 
-  approval:
+  # approval:
+  #   runs-on: ubuntu-latest
+  #   needs: [lint, test, version-check]
+  #   permissions:
+  #     contents: read
+  #     issues: write
+  #   if: github.event_name == 'pull_request'
+  #   steps:
+  #     - uses: trstringer/manual-approval@v1
+  #       with:
+  #         secret: ${{ github.TOKEN }}
+  #         approvers: ${{ github.actor }}
+  #         minimum-approvals: 1
+  #         issue-title: "Publishing Pre-Release"
+  #         issue-body: "Please approve or deny the creation of version the pre-release."
+  #         # issue-body-file-path: relative/file_path/wrt/repo/root
+  #         exclude-workflow-initiator-as-approver: false
+  #         fail-on-denial: true
+  #         additional-approved-words: ''
+  #         additional-denied-words: ''
+
+  notify:
     runs-on: ubuntu-latest
     needs: [lint, test, version-check]
-    permissions:
-      contents: read
-      issues: write
     if: github.event_name == 'pull_request'
+    permissions:
+      issues: write
     steps:
-      - uses: trstringer/manual-approval@v1
+      - uses: actions/github-script@v7
         with:
-          secret: ${{ github.TOKEN }}
-          approvers: ${{ github.actor }}
-          minimum-approvals: 1
-          issue-title: "Publishing Pre-Release"
-          issue-body: "Please approve or deny the creation of version the pre-release."
-          # issue-body-file-path: relative/file_path/wrt/repo/root
-          exclude-workflow-initiator-as-approver: false
-          fail-on-denial: true
-          additional-approved-words: ''
-          additional-denied-words: ''
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Approval granted! You can now trigger the CD workflow here: https://github.com/${{ github.repository }}/actions/workflows/cd.yml'
+            })

@@ -41,7 +41,7 @@ jobs:
         with:
           diff-search: true
           file-name: package.json
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.TOKEN }}
 
   approval:
     runs-on: ubuntu-latest
@@ -50,9 +50,16 @@ jobs:
     steps:
       - uses: trstringer/manual-approval@v1
         with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
+          secret: ${{ github.TOKEN }}
           approvers: ${{ github.actor }}
           minimum-approvals: 1
+          issue-title: "Publishing Pre-Release"
+          issue-body: "Please approve or deny the creation of version the pre-release."
+          # issue-body-file-path: relative/file_path/wrt/repo/root
+          exclude-workflow-initiator-as-approver: false
+          fail-on-denial: true
+          additional-approved-words: ''
+          additional-denied-words: ''
 
   docker:
     runs-on: ubuntu-latest
@@ -64,7 +71,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.TOKEN }}
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -82,7 +89,7 @@ jobs:
       - run: bun run build
       - run: npm publish --registry https://npm.pkg.github.com/
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ github.TOKEN }}
 
   release:
     runs-on: ubuntu-latest

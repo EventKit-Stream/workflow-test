@@ -1,19 +1,11 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   release:
     types: [published, prereleased]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Version tag to release (e.g., v1.2.3)'
-        required: false
 
 concurrency:
-  group: release-${{ github.ref_name || github.event.release.tag_name || github.sha }}
+  group: release-${{ github.event.release.tag_name || github.sha }}
   cancel-in-progress: false
 
 env:
@@ -37,7 +29,7 @@ jobs:
         id: tagver
         uses: ChrSchu90/GitTagSemanticVersion@v1.1
         with:
-          tag: ${{ github.event_name == 'release' && format('refs/tags/{0}', github.event.release.tag_name) || (inputs.tag != '' && format('refs/tags/{0}', inputs.tag) || github.ref) }}
+          tag: ${{ format('refs/tags/{0}', github.event.release.tag_name) }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -45,13 +37,17 @@ jobs:
           node-version: '20'
 
       - name: Ensure package.json matches tag version
+        id: vercheck
         shell: bash
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
           echo "package.json version: $PKG_VERSION"
           echo "tag package version: ${{ steps.tagver.outputs.package }}"
           if [[ "$PKG_VERSION" != "${{ steps.tagver.outputs.package }}" ]]; then
-            echo "::error::Tag version (${{ steps.tagver.outputs.package }}) does not match package.json ($PKG_VERSION)"; exit 1;
+            echo "ver_mismatch=true" >> $GITHUB_OUTPUT
+            echo "::warning::Tag version (${{ steps.tagver.outputs.package }}) does not match package.json ($PKG_VERSION). Will revert if this is a Release event."
+          else
+            echo "ver_mismatch=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Check Release vs tag prerelease parity
@@ -72,8 +68,28 @@ jobs:
             echo "mismatch=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Combine mismatches
+        id: mismatch
+        shell: bash
+        run: |
+          PRE_MISMATCH="${{ steps.precheck.outputs.mismatch }}"
+          VER_MISMATCH="${{ steps.vercheck.outputs.ver_mismatch }}"
+          MISMATCH="false"
+          REASON=""
+          if [[ "$VER_MISMATCH" == "true" ]]; then
+            MISMATCH="true"
+            REASON="package.json version mismatch"
+          fi
+          if [[ "$PRE_MISMATCH" == "true" ]]; then
+            MISMATCH="true"
+            if [[ -n "$REASON" ]]; then REASON="$REASON; "; fi
+            REASON="${REASON}prerelease mismatch"
+          fi
+          echo "mismatch=$MISMATCH" >> $GITHUB_OUTPUT
+          echo "reason=$REASON" >> $GITHUB_OUTPUT
+
       - name: Rollback release to draft and delete tag
-        if: github.event_name == 'release' && steps.precheck.outputs.mismatch == 'true'
+        if: github.event_name == 'release' && steps.mismatch.outputs.mismatch == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -97,10 +113,10 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "$API/repos/$REPO/git/refs/tags/$TAG_NAME"
 
-      - name: Fail due to prerelease mismatch
-        if: github.event_name == 'release' && steps.precheck.outputs.mismatch == 'true'
+      - name: Fail due to validation mismatch
+        if: steps.mismatch.outputs.mismatch == 'true'
         run: |
-          echo "::error::Release prerelease flag did not match tag prerelease. Release reverted to draft and tag removed."; exit 1;
+          echo "::error::Validation failed: ${{ steps.mismatch.outputs.reason }}. If this was a Release event, the release was reverted to draft and the tag removed."; exit 1;
 
       - name: Set outputs (version, prerelease)
         id: out

@@ -75,6 +75,10 @@
 name: Mixed inputs
 
 on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       name:

@@ -1,11 +1,31 @@
 {
   "name": "@eventkit-stream/testing-workflows",
   "version": "0.0.2",
-  "main": "dist/index.js",
-  "files": [
-    "dist"
+  "description": "A simple workflow testing project using Bun and Hono",
+  "keywords": [],
+  "homepage": "https://github.com/eventkit/eventkit-stream",
+  "bugs": {
+    "url": "https://github.com/eventkit/eventkit-stream/issues",
+    "email": "support@example.com"
+  },
+  "license": "SEE LICENSE IN LICENSE.md",
+  "funding": [
+    {
+      "type": "Ko-Fi",
+      "url": "https://ko-fi.com/eventkit-stream"
+    },
+    {
+      "type": "Sponsor",
+      "url": "https://github.com/sponsors/eventkit-stream"
+    }
   ],
-  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eventkit/eventkit-stream.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "build": "bunx tsc",
@@ -13,6 +33,12 @@
     "lint:fix": "bunx eslint . --fix",
     "test": "bunx vitest"
   },
+
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
   "dependencies": {
     "hono": "^4.9.6"
   },

@@ -2,7 +2,7 @@ name: Release
 
 on:
   release:
-    types: [published, prereleased]
+    types: [published]
 
 concurrency:
   group: release-${{ github.event.release.tag_name || github.sha }}

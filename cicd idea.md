@@ -12,20 +12,24 @@ All jobs can be started manually from the Actions tab.
   - If Fail: Comment on the PR with test errors, and block merging.
   - If Pass: Continue the workflow.
 - **Semantic Versioning**: Check if the project version has been updated according to semantic versioning rules.
-  - If Fail: Comment on the PR with versioning errors.
-    - Ask (with a text field) the user to update the version.
-    - Update the PR with the new version.
-    - Go back to **Semantic Versioning** check.
-  - If Pass: Continue the workflow.
-- **Wait for Approval**: Pause the workflow and wait for a manual approval to proceed.
-- **Sub-Versioning**: Ask (with a text field) the user to provide a sub-version (alpha, beta, rc, etc.), that's the version to use for the following jobs.
-- **Release Notes**: Ask (with a text area (md) field) the user to provide release notes for the new version (sub version (pre release)).
-- Now in parallel:
-  - **Docker Image**:
-    - **Build**: Build the image.
-    - **Publish**: Push the image to GitHub Container Registry.
-  - **Package**:
-    - **Build**: Build the package.
-    - **Publish**: Publish the package to this repository's GitHub Packages (as internal (it's a repository in an organization)).
-- **Re-Synchronize Jobs**: Wait for the parallel jobs to finish.
-- **Create Release**: Create a new Pre-Release in GitHub with the new version (sub version), using the provided release notes.
+
+## On Push to Main Branch (Build)
+
+- Check if version is a pre-release (contains alpha, beta, rc, etc.):
+  - If Yes: Do not include "latest" tag when publishing the Docker image and the Package.
+  - If No: Include "latest" tag when publishing the Docker image and the Package.
+
+In Parallel:
+
+- **Docker Image**:
+  - **Build**: Build the image.
+  - **Publish**: Push the image to GitHub Container Registry.
+- **Package**:
+  - **Build**: Build the package.
+  - **Publish**: Publish the package to this orgs's Packages (as internal (it's a repository in an organization)).
+
+## On Push Tag (v*.*.*)
+
+- Check Version:
+  - Check the tag version against the project version.
+  - If Fail: Comment on the PR with version mismatch errors, and block merging.

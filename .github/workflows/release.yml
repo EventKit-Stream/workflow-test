@@ -24,6 +24,8 @@ jobs:
   version-validation:
     name: Validate Version
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.out.outputs.version }}
       prerelease: ${{ steps.out.outputs.prerelease }}
@@ -52,20 +54,53 @@ jobs:
             echo "::error::Tag version (${{ steps.tagver.outputs.package }}) does not match package.json ($PKG_VERSION)"; exit 1;
           fi
 
-      - name: Ensure Release prerelease matches tag prerelease
+      - name: Check Release vs tag prerelease parity
         if: github.event_name == 'release'
+        id: precheck
         shell: bash
         run: |
           REL_PRE="${{ github.event.release.prerelease }}"
           TAG_PRE="${{ steps.tagver.outputs.is_prerelease }}"
           echo "Release prerelease: $REL_PRE"
           echo "Tag is_prerelease: $TAG_PRE"
-          # Normalize to 'true'/'false'
           REL_PRE_N=$(echo "$REL_PRE" | tr '[:upper:]' '[:lower:]')
           TAG_PRE_N=$(echo "$TAG_PRE" | tr '[:upper:]' '[:lower:]')
           if [[ "$REL_PRE_N" != "$TAG_PRE_N" ]]; then
-            echo "::error::Release prerelease flag ($REL_PRE_N) does not match tag prerelease ($TAG_PRE_N)."; exit 1;
+            echo "mismatch=true" >> $GITHUB_OUTPUT
+            echo "::warning::Release prerelease flag ($REL_PRE_N) does not match tag prerelease ($TAG_PRE_N). Will revert release to draft and delete tag."
+          else
+            echo "mismatch=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Rollback release to draft and delete tag
+        if: github.event_name == 'release' && steps.precheck.outputs.mismatch == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          API="https://api.github.com"
+          REPO="${{ github.repository }}"
+          REL_ID="${{ github.event.release.id }}"
+          TAG_NAME="${{ github.event.release.tag_name }}"
+
+          echo "Reverting release $REL_ID to draft..."
+          curl -sS -X PATCH \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$API/repos/$REPO/releases/$REL_ID" \
+            -d '{"draft":true}'
+
+          echo "Deleting tag refs/tags/$TAG_NAME..."
+          curl -sS -X DELETE \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$API/repos/$REPO/git/refs/tags/$TAG_NAME"
+
+      - name: Fail due to prerelease mismatch
+        if: github.event_name == 'release' && steps.precheck.outputs.mismatch == 'true'
+        run: |
+          echo "::error::Release prerelease flag did not match tag prerelease. Release reverted to draft and tag removed."; exit 1;
 
       - name: Set outputs (version, prerelease)
         id: out

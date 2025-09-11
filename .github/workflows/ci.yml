@@ -75,6 +75,8 @@
 name: Mixed inputs
 
 on:
+  push:
+    branches: [ main ]
   workflow_call:
     inputs:
       username:

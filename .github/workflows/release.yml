@@ -31,16 +31,11 @@ jobs:
         with:
           tag: ${{ format('refs/tags/{0}', github.event.release.tag_name) }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
       - name: Ensure package.json matches tag version
         id: vercheck
         shell: bash
         run: |
-          PKG_VERSION=$(node -p "require('./package.json').version")
+          PKG_VERSION=$(grep -oP '"version"\s*:\s*"\K[^"]+' package.json)
           echo "package.json version: $PKG_VERSION"
           echo "tag package version: ${{ steps.tagver.outputs.package }}"
           if [[ "$PKG_VERSION" != "${{ steps.tagver.outputs.package }}" ]]; then

@@ -1,6 +1,6 @@
 {
   "name": "@eventkit-stream/testing-workflows",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "main": "dist/index.js",
   "files": ["dist"],
   "type": "module",

@@ -1,101 +1,100 @@
-name: CI/CD Workflow
+# name: CI Workflow
+
+# on:
+#   pull_request:
+#     branches: [ main ]
+
+# jobs:
+#   # lint:
+#   #   runs-on: ubuntu-latest
+#   #   steps:
+#   #     - uses: actions/checkout@v4
+#   #     - uses: oven-sh/setup-bun@v1
+#   #     - run: bun install
+#   #     - run: bun run lint
+
+#   # test:
+#   #   runs-on: ubuntu-latest
+#   #   steps:
+#   #     - uses: actions/checkout@v4
+#   #     - uses: oven-sh/setup-bun@v1
+#   #     - run: bun install
+#   #     - run: bun run test
+
+#   # version-check:
+#   #   runs-on: ubuntu-latest
+#   #   steps:
+#   #     - uses: actions/checkout@v4
+#   #       with:
+#   #         fetch-depth: 0
+#   #     - uses: EndBug/version-check@v2
+#   #       with:
+#   #         diff-search: true
+#   #         file-name: package.json
+#   #         token: ${{ github.TOKEN }}
+
+#   # approval:
+#   #   runs-on: ubuntu-latest
+#   #   needs: [lint, test, version-check]
+#   #   permissions:
+#   #     contents: read
+#   #     issues: write
+#   #   if: github.event_name == 'pull_request'
+#   #   steps:
+#   #     - uses: trstringer/manual-approval@v1
+#   #       with:
+#   #         secret: ${{ github.TOKEN }}
+#   #         approvers: ${{ github.actor }}
+#   #         minimum-approvals: 1
+#   #         issue-title: "Publishing Pre-Release"
+#   #         issue-body: "Please approve or deny the creation of version the pre-release."
+#   #         # issue-body-file-path: relative/file_path/wrt/repo/root
+#   #         exclude-workflow-initiator-as-approver: false
+#   #         fail-on-denial: true
+#   #         additional-approved-words: ''
+#   #         additional-denied-words: ''
+
+#   notify:
+#     runs-on: ubuntu-latest
+#     # needs: [approval]
+#     if: github.event_name == 'pull_request'
+#     permissions:
+#       contents: read
+#       issues: write
+#       pull-requests: write
+#     steps:
+#       - uses: actions/github-script@v7
+#         with:
+#           script: |
+#             github.rest.issues.createComment({
+#               issue_number: context.issue.number,
+#               owner: context.repo.owner,
+#               repo: context.repo.repo,
+#               body: 'Approval granted! You can now trigger the CD workflow here: https://github.com/${{ github.repository }}/actions/workflows/cd.yml'
+#             })
+name: Mixed inputs
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
     inputs:
-      sub_version:
-        description: 'Sub-version (e.g., alpha, beta, rc)'
+      name:
+        type: choice
+        description: Who to greet
+        options: 
+        - monalisa
+        - cschleiden
+      message:
         required: true
-      release_notes:
-        description: 'Release notes'
-        required: true
+      use-emoji:
+        type: boolean
+        description: Include 🎉🤣 emojis
+      environment:
+        type: environment
 
 jobs:
-  lint:
+  greet:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
-      - run: bun install
-      - run: bun run lint
 
-  test:
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
-      - run: bun install
-      - run: bun run test
-
-  version-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: EndBug/version-check@v2
-        with:
-          diff-search: true
-          file-name: package.json
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  approval:
-    runs-on: ubuntu-latest
-    needs: [lint, test, version-check]
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: ${{ github.actor }}
-          minimum-approvals: 1
-
-  docker:
-    runs-on: ubuntu-latest
-    needs: [approval]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/${{ github.repository }}:latest
-
-  package:
-    runs-on: ubuntu-latest
-    needs: [approval]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
-      - run: bun install
-      - run: bun run build
-      - run: npm publish --registry https://npm.pkg.github.com/
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release:
-    runs-on: ubuntu-latest
-    needs: [docker, package]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Get version
-        id: get_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ steps.get_version.outputs.version }}${{ github.event.inputs.sub_version && format('-{0}', github.event.inputs.sub_version) || '' }}
-          prerelease: ${{ github.event.inputs.sub_version != '' }}
-          body: ${{ github.event.inputs.release_notes || 'Auto-generated release notes' }}
-          generate_release_notes: ${{ !github.event.inputs.release_notes }}
+    - name: Send greeting
+      run: echo "${{ github.event.inputs.message }} ${{ fromJSON('["", "🥳"]')[github.event.inputs.use-emoji == 'true'] }} ${{ github.event.inputs.name }}"

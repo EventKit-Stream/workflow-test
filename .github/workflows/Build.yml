@@ -1,0 +1,84 @@
+# name: CD Workflow
+
+# on:
+#   push:
+#     branches: [ main ]
+#   workflow_dispatch:
+#     inputs:
+#       release_type:
+#         description: 'Choose release type'
+#         required: true
+#         default: 'release'
+#         type: choice
+#         options:
+#         - release
+#         - pre-release
+# jobs:
+#   version-check:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
+#       - uses: EndBug/version-check@v2
+#         with:
+#           diff-search: true
+#           file-name: package.json
+#           token: ${{ github.TOKEN }}
+#       - name: Set output if version changed
+#         id: version_check
+#         run: |
+#           PACKAGE_VERSION=$(cat ./package.json | jq '.version' | tr -d '"')
+#           echo "current-version=${PACKAGE_VERSION}" >> $GITHUB_OUTPUT
+      
+#   docker:
+#     needs: version-check
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Log in to GitHub Container Registry
+#         uses: docker/login-action@v3
+#         with:
+#           registry: ghcr.io
+#           username: ${{ github.actor }}
+#           password: ${{ secrets.GITHUB_TOKEN }}
+#       - name: Build and push Docker image
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: .
+#           push: true
+#           tags: ghcr.io/${{ github.repository }}:${{ needs.version-check.outputs.current-version }}
+#       - name: Build and push Docker image beta
+#         if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_type == 'pre-release'
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: .
+#           push: true
+#           tags: ghcr.io/${{ github.repository }}:${{ needs.version-check.outputs.current-version }}-beta
+
+#   package:
+#     needs: version-check
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: oven-sh/setup-bun@v1
+#       - run: bun install
+#       - run: bun run build
+#       - run: npm publish --registry https://npm.pkg.github.com/ ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_type == 'pre-release' && '--tag beta' || '' }}
+#         env:
+#           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+name: Main
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Release
+        uses: softprops/action-gh-release@v2

@@ -169,7 +169,7 @@ jobs:
 
   npm-GH:
     name: Publish GitHub Package (npm)
-    needs: [version-validation, npm-JS]
+    needs: [version-validation]
     runs-on: ubuntu-latest
     permissions:
       contents: read

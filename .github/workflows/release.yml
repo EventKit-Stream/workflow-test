@@ -3,6 +3,8 @@ name: "🚀 Release: Validate, Build, and Publish"
 on:
   release:
     types: [published]
+    # NOTE: The release event does not support branch filters in the trigger.
+    # We gate to main via a job-level condition: github.event.release.target_commitish == 'main'.
 
 concurrency:
   group: release-${{ github.event.release.tag_name || github.sha }}
@@ -16,6 +18,7 @@ jobs:
   # 1) Validate tag, package.json version, and prerelease parity.
   #    If mismatches are detected on a Release event, the job reverts the release to draft and deletes the tag.
   version-validation:
+    if: github.event.release.target_commitish == 'main'
     name: "🧪 Validate version and release state"
     runs-on: ubuntu-latest
     permissions:

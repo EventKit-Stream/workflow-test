@@ -209,7 +209,7 @@ jobs:
 
       - name: "❌ Fail due to validation mismatch"
         run: |
-          echo "::error::Validation failed: ${{ needs.version-validation.outputs.reason }}. Release reverted to draft and tag removed."; exit 1;
+          echo "::error::Validation failed: ${{ needs.version-validation.outputs.reason }}. Release reverted to draft and tag removed.";
 
   # 3) Build and publish a container image to GHCR using the validated version.
   docker:

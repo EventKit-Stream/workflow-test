@@ -913,14 +913,6 @@ packages:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
 
-  test-typed-export@file:test-typed-export-0.0.4.tgz:
-    resolution: {integrity: sha512-xXvC1LXuSouoIdIiMDf9EUL5XPVOGKXy0ykbIGynpTjNgx9PYVkdQDNQSe4+rA6hLewM33uJu8bMP9u436Cn5w==, tarball: file:test-typed-export-0.0.4.tgz}
-    version: 0.0.4
-
-  test-typed-export@file:test-typed-export-0.0.5.tgz:
-    resolution: {integrity: sha512-p/yW5Q9aAyWWg408QYatfQ2B8cOmpc99gos0lcFUOgzi8i9mBvivL0YAIgZlTKhFdPzvLWEt5qsD4HZ1bwus4Q==, tarball: file:test-typed-export-0.0.5.tgz}
-    version: 0.0.5
-
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
 
@@ -1882,15 +1874,6 @@ snapshots:
   supports-color@7.2.0:
     dependencies:
       has-flag: 4.0.0
-
-  test-typed-export@file:test-typed-export-0.0.4.tgz:
-    dependencies:
-      hono: 4.9.7
-
-  test-typed-export@file:test-typed-export-0.0.5.tgz:
-    dependencies:
-      hono: 4.9.7
-      test-typed-export: file:test-typed-export-0.0.4.tgz
 
   tinybench@2.9.0: {}
 

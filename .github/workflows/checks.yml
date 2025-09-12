@@ -1,4 +1,4 @@
-name: Checks
+name: "✅ PR Checks: Lint, Test, Version"
 
 on:
   pull_request:
@@ -10,62 +10,67 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Lint the project with ESLint using Bun.
   lint:
-    name: Lint
+    name: "🧹 Lint"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: "📥 Checkout repository"
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: "🥖 Set up Bun"
         uses: oven-sh/setup-bun@v2
 
-      - name: Install deps
+      - name: "📦 Install dependencies"
         run: bun install
 
-      - name: Run ESLint
+      - name: "🔎 Run ESLint"
         run: bun run lint
 
+  # Run unit tests with Bun.
   test:
-    name: Test
+    name: "🧪 Test"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: "📥 Checkout repository"
         uses: actions/checkout@v4
 
-      - name: Setup Bun
+      - name: "🥖 Set up Bun"
         uses: oven-sh/setup-bun@v2
 
-      - name: Install deps
+      - name: "📦 Install dependencies"
         run: bun install
 
-      - name: Run unit tests
+      - name: "🧪 Run unit tests"
         run: bun run test -- --run
 
+  # Ensure package.json version was bumped in PRs when relevant.
   version-check:
-    name: Version Check
+    name: "🏷️ Version bump check"
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v4
+      - name: "📥 Checkout repository (full history)"
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - id: check
+      - name: "🔎 Detect package.json version change"
+        id: check
         uses: EndBug/version-check@v2
         with:
           diff-search: true
           file-name: package.json
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fail if version not bumped
+      - name: "❌ Fail if version not bumped"
         if: steps.check.outputs.changed == 'false'
         run: |
           echo "::error::package.json version not changed in this PR"; exit 1;
 
-      - name: Log version change
+      - name: "📝 Log version change"
         if: steps.check.outputs.changed == 'true'
         run: |
           echo "Version changed to ${{ steps.check.outputs.version }} (type: ${{ steps.check.outputs.type }}) in commit ${{ steps.check.outputs.commit }}"

@@ -1,4 +1,4 @@
-name: Release
+name: "🚀 Release: Validate, Build, and Publish"
 
 on:
   release:
@@ -13,8 +13,10 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # 1) Validate tag, package.json version, and prerelease parity.
+  #    If mismatches are detected on a Release event, the job reverts the release to draft and deletes the tag.
   version-validation:
-    name: Validate Version
+    name: "🧪 Validate version and release state"
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -22,16 +24,16 @@ jobs:
       version: ${{ steps.out.outputs.version }}
       prerelease: ${{ steps.out.outputs.prerelease }}
     steps:
-      - name: Checkout
+      - name: "📥 Checkout repository"
         uses: actions/checkout@v4
 
-      - name: Parse tag with Git Tag Semantic Version
+      - name: "🔎 Parse SemVer from tag"
         id: tagver
         uses: ChrSchu90/GitTagSemanticVersion@v1.1
         with:
           tag: ${{ format('refs/tags/{0}', github.event.release.tag_name) }}
 
-      - name: Ensure package.json matches tag version
+      - name: "🧮 Verify package.json matches tag"
         id: vercheck
         shell: bash
         run: |
@@ -45,7 +47,7 @@ jobs:
             echo "ver_mismatch=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check Release vs tag prerelease parity
+      - name: "🔀 Check prerelease parity (release vs tag)"
         if: github.event_name == 'release'
         id: precheck
         shell: bash
@@ -63,7 +65,7 @@ jobs:
             echo "mismatch=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Combine mismatches
+      - name: "🧩 Summarize validation mismatches"
         id: mismatch
         shell: bash
         run: |
@@ -83,7 +85,7 @@ jobs:
           echo "mismatch=$MISMATCH" >> $GITHUB_OUTPUT
           echo "reason=$REASON" >> $GITHUB_OUTPUT
 
-      - name: Rollback release to draft and delete tag
+      - name: "⏪ Roll back release to draft and delete tag"
         if: github.event_name == 'release' && steps.mismatch.outputs.mismatch == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -108,67 +110,69 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "$API/repos/$REPO/git/refs/tags/$TAG_NAME"
 
-      - name: Fail due to validation mismatch
+      - name: "❌ Fail due to validation mismatch"
         if: steps.mismatch.outputs.mismatch == 'true'
         run: |
           echo "::error::Validation failed: ${{ steps.mismatch.outputs.reason }}. If this was a Release event, the release was reverted to draft and the tag removed."; exit 1;
 
-      - name: Set outputs (version, prerelease)
+      - name: "📤 Export version outputs"
         id: out
         shell: bash
         run: |
           echo "version=${{ steps.tagver.outputs.package }}" >> $GITHUB_OUTPUT
           echo "prerelease=${{ steps.tagver.outputs.is_prerelease }}" >> $GITHUB_OUTPUT
 
-  # docker:
-  #   name: Build and Publish Docker Image
-  #   needs: version-validation
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #     packages: write
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+  # 2) Build and publish a container image to GHCR using the validated version.
+  docker:
+    name: "🐳 Build and publish Docker image (GHCR)"
+    needs: version-validation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v4
 
-  #     - name: Setup Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
+      - name: "🔧 Set up Docker Buildx"
+        uses: docker/setup-buildx-action@v3
 
-  #     - name: Login to GHCR
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: ${{ env.REGISTRY }}
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
+      - name: "🔐 Log in to GHCR"
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  #     - name: Compute lower-case image name
-  #       id: lc
-  #       shell: bash
-  #       run: |
-  #         echo "name=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+      - name: "🔡 Compute lowercase image name"
+        id: lc
+        shell: bash
+        run: |
+          echo "name=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
-  #     - name: Extract metadata (tags, labels)
-  #       id: meta
-  #       uses: docker/metadata-action@v5
-  #       with:
-  #         images: ${{ steps.lc.outputs.name }}
-  #         tags: |
-  #           type=raw,value=${{ needs.version-validation.outputs.version }},prefix=v
-  #           type=raw,value=latest,enable=${{ needs.version-validation.outputs.prerelease == 'false' }}
+      - name: "🏷️ Generate image tags and labels"
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.lc.outputs.name }}
+          tags: |
+            type=raw,value=${{ needs.version-validation.outputs.version }},prefix=v
+            type=raw,value=latest,enable=${{ needs.version-validation.outputs.prerelease == 'false' }}
 
-  #     - name: Build and push
-  #       uses: docker/build-push-action@v6
-  #       with:
-  #         context: .
-  #         file: ./Dockerfile
-  #         push: true
-  #         tags: ${{ steps.meta.outputs.tags }}
-  #         labels: ${{ steps.meta.outputs.labels }}
-  #         cache-from: type=gha
-  #         cache-to: type=gha,mode=max
+      - name: "🚚 Build and push image"
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
+  # 3) Publish the package to GitHub Packages (npm registry on GitHub).
   npm-GH:
-    name: Publish GitHub Package (npm)
+    name: "📦 Publish to GitHub Packages (npm)"
     needs: [version-validation]
     runs-on: ubuntu-latest
     permissions:
@@ -176,26 +180,26 @@ jobs:
       id-token: write
       packages: write
     steps:
-      - name: Checkout
+      - name: "📥 Checkout repository"
         uses: actions/checkout@v4
 
-      - name: Setup Node.js for npm publish
+      - name: "🟢 Use Node.js 20 (GitHub Packages)"
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@eventkit-stream'
 
-      - name: Setup Bun
+      - name: "🥖 Set up Bun"
         uses: oven-sh/setup-bun@v2
 
-      - name: Install deps
+      - name: "📦 Install dependencies"
         run: bun install
 
-      - name: Build package
+      - name: "🛠️ Build package"
         run: bun run build
 
-      - name: Publish package
+      - name: "🚀 Publish to GitHub Packages"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -205,18 +209,19 @@ jobs:
             npm publish --tag latest
           fi
 
+  # 4) Publish the package to npmjs.com (public npm registry).
   npm-JS:
-    name: Publish npmJs Package (npm)
+    name: "📦 Publish to npmjs.com (npm)"
     needs: version-validation
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
     steps:
-      - name: Checkout
+      - name: "📥 Checkout repository"
         uses: actions/checkout@v4
 
-      - name: Setup Node.js for npm publish
+      - name: "🟢 Use Node.js 20 (npmjs)"
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -224,16 +229,16 @@ jobs:
 
       # - run: npm ci
 
-      - name: Setup Bun
+      - name: "🥖 Set up Bun"
         uses: oven-sh/setup-bun@v2
 
-      - name: Install deps
+      - name: "📦 Install dependencies"
         run: bun install
 
-      - name: Build package
+      - name: "🛠️ Build package"
         run: bun run build
 
-      - name: Publish package
+      - name: "🚀 Publish to npm registry (npmjs.com)"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |

@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@eventkit-stream/workflow-test':
-        specifier: ^0.0.16
-        version: 0.0.16
       hono:
         specifier: ^4.9.7
         version: 4.9.7
@@ -229,9 +226,6 @@ packages:
   '@eslint/plugin-kit@0.3.5':
     resolution: {integrity: sha512-Z5kJ+wU3oA7MMIqVR9tyZRtjYPr4OC004Q4Rw7pgOKUOKkJfZ3O24nz3WYfGRpMDNmcOi3TwQOmgm7B7Tpii0w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@eventkit-stream/workflow-test@0.0.16':
-    resolution: {integrity: sha512-flnO+K6l9Uq76EaowfwwJsIKL0j/bfyfsabfczsmUkVIWA9QOI2kmUiYN4L4/24pOeDdqOsKZfATWKoyUgfpMg==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -1187,10 +1181,6 @@ snapshots:
     dependencies:
       '@eslint/core': 0.15.2
       levn: 0.4.1
-
-  '@eventkit-stream/workflow-test@0.0.16':
-    dependencies:
-      hono: 4.9.7
 
   '@humanfs/core@0.19.1': {}
 

@@ -1,6 +1,6 @@
 {
   "name": "@eventkit-stream/workflow-test",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "A simple workflow testing project using Bun and Hono",
   "keywords": [],
   "homepage": "https://github.com/eventkit/eventkit-stream",

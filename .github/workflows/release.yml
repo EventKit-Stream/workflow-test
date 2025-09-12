@@ -169,7 +169,7 @@ jobs:
 
   npm-GH:
     name: Publish GitHub Package (npm)
-    needs: version-validation
+    needs: [version-validation, npm-JS]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -230,8 +230,6 @@ jobs:
         run: bun run build
 
       - name: Publish package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |

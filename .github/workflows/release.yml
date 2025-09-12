@@ -13,200 +13,200 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  version-validation:
-    name: Validate Version
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      version: ${{ steps.out.outputs.version }}
-      prerelease: ${{ steps.out.outputs.prerelease }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # version-validation:
+  #   name: Validate Version
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #   outputs:
+  #     version: ${{ steps.out.outputs.version }}
+  #     prerelease: ${{ steps.out.outputs.prerelease }}
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Parse tag with Git Tag Semantic Version
-        id: tagver
-        uses: ChrSchu90/GitTagSemanticVersion@v1.1
-        with:
-          tag: ${{ format('refs/tags/{0}', github.event.release.tag_name) }}
+  #     - name: Parse tag with Git Tag Semantic Version
+  #       id: tagver
+  #       uses: ChrSchu90/GitTagSemanticVersion@v1.1
+  #       with:
+  #         tag: ${{ format('refs/tags/{0}', github.event.release.tag_name) }}
 
-      - name: Ensure package.json matches tag version
-        id: vercheck
-        shell: bash
-        run: |
-          PKG_VERSION=$(grep -oP '"version"\s*:\s*"\K[^"]+' package.json)
-          echo "package.json version: $PKG_VERSION"
-          echo "tag package version: ${{ steps.tagver.outputs.package }}"
-          if [[ "$PKG_VERSION" != "${{ steps.tagver.outputs.package }}" ]]; then
-            echo "ver_mismatch=true" >> $GITHUB_OUTPUT
-            echo "::warning::Tag version (${{ steps.tagver.outputs.package }}) does not match package.json ($PKG_VERSION). Will revert if this is a Release event."
-          else
-            echo "ver_mismatch=false" >> $GITHUB_OUTPUT
-          fi
+  #     - name: Ensure package.json matches tag version
+  #       id: vercheck
+  #       shell: bash
+  #       run: |
+  #         PKG_VERSION=$(grep -oP '"version"\s*:\s*"\K[^"]+' package.json)
+  #         echo "package.json version: $PKG_VERSION"
+  #         echo "tag package version: ${{ steps.tagver.outputs.package }}"
+  #         if [[ "$PKG_VERSION" != "${{ steps.tagver.outputs.package }}" ]]; then
+  #           echo "ver_mismatch=true" >> $GITHUB_OUTPUT
+  #           echo "::warning::Tag version (${{ steps.tagver.outputs.package }}) does not match package.json ($PKG_VERSION). Will revert if this is a Release event."
+  #         else
+  #           echo "ver_mismatch=false" >> $GITHUB_OUTPUT
+  #         fi
 
-      - name: Check Release vs tag prerelease parity
-        if: github.event_name == 'release'
-        id: precheck
-        shell: bash
-        run: |
-          REL_PRE="${{ github.event.release.prerelease }}"
-          TAG_PRE="${{ steps.tagver.outputs.is_prerelease }}"
-          echo "Release prerelease: $REL_PRE"
-          echo "Tag is_prerelease: $TAG_PRE"
-          REL_PRE_N=$(echo "$REL_PRE" | tr '[:upper:]' '[:lower:]')
-          TAG_PRE_N=$(echo "$TAG_PRE" | tr '[:upper:]' '[:lower:]')
-          if [[ "$REL_PRE_N" != "$TAG_PRE_N" ]]; then
-            echo "mismatch=true" >> $GITHUB_OUTPUT
-            echo "::warning::Release prerelease flag ($REL_PRE_N) does not match tag prerelease ($TAG_PRE_N). Will revert release to draft and delete tag."
-          else
-            echo "mismatch=false" >> $GITHUB_OUTPUT
-          fi
+  #     - name: Check Release vs tag prerelease parity
+  #       if: github.event_name == 'release'
+  #       id: precheck
+  #       shell: bash
+  #       run: |
+  #         REL_PRE="${{ github.event.release.prerelease }}"
+  #         TAG_PRE="${{ steps.tagver.outputs.is_prerelease }}"
+  #         echo "Release prerelease: $REL_PRE"
+  #         echo "Tag is_prerelease: $TAG_PRE"
+  #         REL_PRE_N=$(echo "$REL_PRE" | tr '[:upper:]' '[:lower:]')
+  #         TAG_PRE_N=$(echo "$TAG_PRE" | tr '[:upper:]' '[:lower:]')
+  #         if [[ "$REL_PRE_N" != "$TAG_PRE_N" ]]; then
+  #           echo "mismatch=true" >> $GITHUB_OUTPUT
+  #           echo "::warning::Release prerelease flag ($REL_PRE_N) does not match tag prerelease ($TAG_PRE_N). Will revert release to draft and delete tag."
+  #         else
+  #           echo "mismatch=false" >> $GITHUB_OUTPUT
+  #         fi
 
-      - name: Combine mismatches
-        id: mismatch
-        shell: bash
-        run: |
-          PRE_MISMATCH="${{ steps.precheck.outputs.mismatch }}"
-          VER_MISMATCH="${{ steps.vercheck.outputs.ver_mismatch }}"
-          MISMATCH="false"
-          REASON=""
-          if [[ "$VER_MISMATCH" == "true" ]]; then
-            MISMATCH="true"
-            REASON="package.json version mismatch"
-          fi
-          if [[ "$PRE_MISMATCH" == "true" ]]; then
-            MISMATCH="true"
-            if [[ -n "$REASON" ]]; then REASON="$REASON; "; fi
-            REASON="${REASON}prerelease mismatch"
-          fi
-          echo "mismatch=$MISMATCH" >> $GITHUB_OUTPUT
-          echo "reason=$REASON" >> $GITHUB_OUTPUT
+  #     - name: Combine mismatches
+  #       id: mismatch
+  #       shell: bash
+  #       run: |
+  #         PRE_MISMATCH="${{ steps.precheck.outputs.mismatch }}"
+  #         VER_MISMATCH="${{ steps.vercheck.outputs.ver_mismatch }}"
+  #         MISMATCH="false"
+  #         REASON=""
+  #         if [[ "$VER_MISMATCH" == "true" ]]; then
+  #           MISMATCH="true"
+  #           REASON="package.json version mismatch"
+  #         fi
+  #         if [[ "$PRE_MISMATCH" == "true" ]]; then
+  #           MISMATCH="true"
+  #           if [[ -n "$REASON" ]]; then REASON="$REASON; "; fi
+  #           REASON="${REASON}prerelease mismatch"
+  #         fi
+  #         echo "mismatch=$MISMATCH" >> $GITHUB_OUTPUT
+  #         echo "reason=$REASON" >> $GITHUB_OUTPUT
 
-      - name: Rollback release to draft and delete tag
-        if: github.event_name == 'release' && steps.mismatch.outputs.mismatch == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          API="https://api.github.com"
-          REPO="${{ github.repository }}"
-          REL_ID="${{ github.event.release.id }}"
-          TAG_NAME="${{ github.event.release.tag_name }}"
+  #     - name: Rollback release to draft and delete tag
+  #       if: github.event_name == 'release' && steps.mismatch.outputs.mismatch == 'true'
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       shell: bash
+  #       run: |
+  #         set -euo pipefail
+  #         API="https://api.github.com"
+  #         REPO="${{ github.repository }}"
+  #         REL_ID="${{ github.event.release.id }}"
+  #         TAG_NAME="${{ github.event.release.tag_name }}"
 
-          echo "Reverting release $REL_ID to draft..."
-          curl -sS -X PATCH \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "$API/repos/$REPO/releases/$REL_ID" \
-            -d '{"draft":true}'
+  #         echo "Reverting release $REL_ID to draft..."
+  #         curl -sS -X PATCH \
+  #           -H "Authorization: Bearer $GITHUB_TOKEN" \
+  #           -H "Accept: application/vnd.github+json" \
+  #           "$API/repos/$REPO/releases/$REL_ID" \
+  #           -d '{"draft":true}'
 
-          echo "Deleting tag refs/tags/$TAG_NAME..."
-          curl -sS -X DELETE \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "$API/repos/$REPO/git/refs/tags/$TAG_NAME"
+  #         echo "Deleting tag refs/tags/$TAG_NAME..."
+  #         curl -sS -X DELETE \
+  #           -H "Authorization: Bearer $GITHUB_TOKEN" \
+  #           -H "Accept: application/vnd.github+json" \
+  #           "$API/repos/$REPO/git/refs/tags/$TAG_NAME"
 
-      - name: Fail due to validation mismatch
-        if: steps.mismatch.outputs.mismatch == 'true'
-        run: |
-          echo "::error::Validation failed: ${{ steps.mismatch.outputs.reason }}. If this was a Release event, the release was reverted to draft and the tag removed."; exit 1;
+  #     - name: Fail due to validation mismatch
+  #       if: steps.mismatch.outputs.mismatch == 'true'
+  #       run: |
+  #         echo "::error::Validation failed: ${{ steps.mismatch.outputs.reason }}. If this was a Release event, the release was reverted to draft and the tag removed."; exit 1;
 
-      - name: Set outputs (version, prerelease)
-        id: out
-        shell: bash
-        run: |
-          echo "version=${{ steps.tagver.outputs.package }}" >> $GITHUB_OUTPUT
-          echo "prerelease=${{ steps.tagver.outputs.is_prerelease }}" >> $GITHUB_OUTPUT
+  #     - name: Set outputs (version, prerelease)
+  #       id: out
+  #       shell: bash
+  #       run: |
+  #         echo "version=${{ steps.tagver.outputs.package }}" >> $GITHUB_OUTPUT
+  #         echo "prerelease=${{ steps.tagver.outputs.is_prerelease }}" >> $GITHUB_OUTPUT
 
-  docker:
-    name: Build and Publish Docker Image
-    needs: version-validation
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # docker:
+  #   name: Build and Publish Docker Image
+  #   needs: version-validation
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  #     - name: Setup Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Login to GHCR
+  #       uses: docker/login-action@v3
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Compute lower-case image name
-        id: lc
-        shell: bash
-        run: |
-          echo "name=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+  #     - name: Compute lower-case image name
+  #       id: lc
+  #       shell: bash
+  #       run: |
+  #         echo "name=${{ env.REGISTRY }}/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ steps.lc.outputs.name }}
-          tags: |
-            type=raw,value=${{ needs.version-validation.outputs.version }},prefix=v
-            type=raw,value=latest,enable=${{ needs.version-validation.outputs.prerelease == 'false' }}
+  #     - name: Extract metadata (tags, labels)
+  #       id: meta
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: ${{ steps.lc.outputs.name }}
+  #         tags: |
+  #           type=raw,value=${{ needs.version-validation.outputs.version }},prefix=v
+  #           type=raw,value=latest,enable=${{ needs.version-validation.outputs.prerelease == 'false' }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  #     - name: Build and push
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: ./Dockerfile
+  #         push: true
+  #         tags: ${{ steps.meta.outputs.tags }}
+  #         labels: ${{ steps.meta.outputs.labels }}
+  #         cache-from: type=gha
+  #         cache-to: type=gha,mode=max
 
-  npm-GH:
-    name: Publish GitHub Package (npm)
-    needs: [version-validation, npm-JS]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  # npm-GH:
+  #   name: Publish GitHub Package (npm)
+  #   needs: [version-validation, npm-JS]
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
 
-      - name: Setup Node.js for npm publish
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@eventkit-stream'
+  #     - name: Setup Node.js for npm publish
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         registry-url: 'https://npm.pkg.github.com'
+  #         scope: '@eventkit-stream'
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+  #     - name: Setup Bun
+  #       uses: oven-sh/setup-bun@v2
 
-      - name: Install deps
-        run: bun install
+  #     - name: Install deps
+  #       run: bun install
 
-      - name: Build package
-        run: bun run build
+  #     - name: Build package
+  #       run: bun run build
 
-      - name: Publish package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
-            npm publish --tag next
-          else
-            npm publish --tag latest
-          fi
+  #     - name: Publish package
+  #       env:
+  #         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #       run: |
+  #         if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
+  #           npm publish --tag next
+  #         else
+  #           npm publish --tag latest
+  #         fi
 
   npm-JS:
     name: Publish npmJs Package (npm)
-    needs: version-validation
+    # needs: version-validation
     runs-on: ubuntu-latest
     permissions:
       contents: read

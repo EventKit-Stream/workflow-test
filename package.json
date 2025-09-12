@@ -1,6 +1,6 @@
 {
-  "name": "@eventkit-stream/testing-workflows",
-  "version": "0.0.12",
+  "name": "@eventkit-stream/workflow-test",
+  "version": "0.0.13",
   "description": "A simple workflow testing project using Bun and Hono",
   "keywords": [],
   "homepage": "https://github.com/eventkit/eventkit-stream",
@@ -21,7 +21,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eventkit/eventkit-stream.git"
+    "url": "git+https://github.com/eventkit-stream/workflow-test.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "dev": "bun run --hot src/index.ts",

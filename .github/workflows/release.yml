@@ -15,37 +15,107 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # 1) Validate tag, package.json version, and prerelease parity.
-  #    If mismatches are detected on a Release event, the job reverts the release to draft and deletes the tag.
+  # 1) Check target branch and prerelease (if not main, must be prerelease)
+  target-check:
+    name: "🔍 Check target branch and prerelease"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      mismatch: ${{ steps.mismatch.outputs.mismatch }}
+      reason: ${{ steps.mismatch.outputs.reason }}
+    steps:
+      - name: "🔀 Check target and prerelease"
+        id: mismatch
+        shell: bash
+        run: |
+          TARGET="${{ github.event.release.target_commitish }}"
+          REL_PRE="${{ github.event.release.prerelease }}"
+          if [[ "$TARGET" != "main" && "$REL_PRE" == "false" ]]; then
+            echo "mismatch=true" >> $GITHUB_OUTPUT
+            echo "reason=target not main and not prerelease" >> $GITHUB_OUTPUT
+            echo "::error::Target branch is not main and release is not prerelease. Will rollback."
+            exit 1
+          else
+            echo "mismatch=false" >> $GITHUB_OUTPUT
+            echo "reason=" >> $GITHUB_OUTPUT
+          fi
+
+  # 1b) Rollback if target/check failed
+  rollback-target-check:
+    name: "⏪ Rollback target/check mismatch"
+    needs: target-check
+    if: needs.target-check.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: "🔧 Set up rollback variables"
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "API=https://api.github.com" >> $GITHUB_ENV
+          echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
+          echo "REL_ID=${{ github.event.release.id }}" >> $GITHUB_ENV
+          echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+      - name: "🔄 Roll back release to draft"
+        shell: bash
+        run: |
+          echo "Reverting release $REL_ID to draft..."
+          curl -sS -X PATCH \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$API/repos/$REPO/releases/$REL_ID" \
+            -d '{"draft":true}'
+
+      - name: "🗑️ Deleting tag"
+        shell: bash
+        run: |
+          echo "Deleting tag refs/tags/$TAG_NAME..."
+          curl -sS -X DELETE \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$API/repos/$REPO/git/refs/tags/$TAG_NAME"
+
+      - name: "❌ Fail due to validation mismatch"
+        run: |
+          echo "::error::Validation failed: ${{ needs.target-check.outputs.reason }}. Release reverted to draft and tag removed.";
+
+  # 2) Validate version and prerelease parity
   version-validation:
-    if: github.event.release.target_commitish == 'main'
-    name: "🧪 Validate version and release state"
+    name: "🧪 Validate version and prerelease parity"
+    needs: target-check
+    if: needs.target-check.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     outputs:
       version: ${{ steps.out.outputs.version }}
       prerelease: ${{ steps.out.outputs.prerelease }}
+      mismatch: ${{ steps.mismatch.outputs.mismatch }}
+      reason: ${{ steps.mismatch.outputs.reason }}
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v4
 
       - name: "🔎 Parse SemVer from tag"
-        id: tagver
+        id: tag_version
         uses: ChrSchu90/GitTagSemanticVersion@v1.1
         with:
           tag: ${{ format('refs/tags/{0}', github.event.release.tag_name) }}
 
       - name: "🧮 Verify package.json matches tag"
-        id: vercheck
+        id: version_check
         shell: bash
         run: |
           PKG_VERSION=$(grep -oP '"version"\s*:\s*"\K[^"]+' package.json)
           echo "package.json version: $PKG_VERSION"
-          echo "tag package version: ${{ steps.tagver.outputs.package }}"
-          if [[ "$PKG_VERSION" != "${{ steps.tagver.outputs.package }}" ]]; then
+          echo "tag package version: ${{ steps.tag_version.outputs.package }}"
+          if [[ "$PKG_VERSION" != "${{ steps.tag_version.outputs.package }}" ]]; then
             echo "ver_mismatch=true" >> $GITHUB_OUTPUT
-            echo "::warning::Tag version (${{ steps.tagver.outputs.package }}) does not match package.json ($PKG_VERSION). Will revert if this is a Release event."
+            echo "::warning::Tag version (${{ steps.tag_version.outputs.package }}) does not match package.json ($PKG_VERSION). Will revert if this is a Release event."
           else
             echo "ver_mismatch=false" >> $GITHUB_OUTPUT
           fi
@@ -56,7 +126,7 @@ jobs:
         shell: bash
         run: |
           REL_PRE="${{ github.event.release.prerelease }}"
-          TAG_PRE="${{ steps.tagver.outputs.is_prerelease }}"
+          TAG_PRE="${{ steps.tag_version.outputs.is_prerelease }}"
           echo "Release prerelease: $REL_PRE"
           echo "Tag is_prerelease: $TAG_PRE"
           REL_PRE_N=$(echo "$REL_PRE" | tr '[:upper:]' '[:lower:]')
@@ -73,7 +143,7 @@ jobs:
         shell: bash
         run: |
           PRE_MISMATCH="${{ steps.precheck.outputs.mismatch }}"
-          VER_MISMATCH="${{ steps.vercheck.outputs.ver_mismatch }}"
+          VER_MISMATCH="${{ steps.version_check.outputs.ver_mismatch }}"
           MISMATCH="false"
           REASON=""
           if [[ "$VER_MISMATCH" == "true" ]]; then
@@ -88,18 +158,39 @@ jobs:
           echo "mismatch=$MISMATCH" >> $GITHUB_OUTPUT
           echo "reason=$REASON" >> $GITHUB_OUTPUT
 
-      - name: "⏪ Roll back release to draft and delete tag"
-        if: github.event_name == 'release' && steps.mismatch.outputs.mismatch == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: "❌ Fail if mismatch"
+        if: steps.mismatch.outputs.mismatch == 'true'
+        run: exit 1
+
+      - name: "📤 Export version outputs"
+        id: out
+        shell: bash
+        run: |
+          echo "version=${{ steps.tag_version.outputs.package }}" >> $GITHUB_OUTPUT
+          echo "prerelease=${{ steps.tag_version.outputs.is_prerelease }}" >> $GITHUB_OUTPUT
+
+  # 2b) Rollback if version validation failed
+  rollback-version-validation:
+    name: "⏪ Rollback version validation mismatch"
+    needs: version-validation
+    if: needs.version-validation.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: "🔧 Set up rollback variables"
         shell: bash
         run: |
           set -euo pipefail
-          API="https://api.github.com"
-          REPO="${{ github.repository }}"
-          REL_ID="${{ github.event.release.id }}"
-          TAG_NAME="${{ github.event.release.tag_name }}"
-
+          echo "API=https://api.github.com" >> $GITHUB_ENV
+          echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
+          echo "REL_ID=${{ github.event.release.id }}" >> $GITHUB_ENV
+          echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+      - name: "🔄 Roll back release to draft"
+        shell: bash
+        run: |
           echo "Reverting release $REL_ID to draft..."
           curl -sS -X PATCH \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -107,6 +198,9 @@ jobs:
             "$API/repos/$REPO/releases/$REL_ID" \
             -d '{"draft":true}'
 
+      - name: "🗑️ Deleting tag"
+        shell: bash
+        run: |
           echo "Deleting tag refs/tags/$TAG_NAME..."
           curl -sS -X DELETE \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -114,21 +208,14 @@ jobs:
             "$API/repos/$REPO/git/refs/tags/$TAG_NAME"
 
       - name: "❌ Fail due to validation mismatch"
-        if: steps.mismatch.outputs.mismatch == 'true'
         run: |
-          echo "::error::Validation failed: ${{ steps.mismatch.outputs.reason }}. If this was a Release event, the release was reverted to draft and the tag removed."; exit 1;
+          echo "::error::Validation failed: ${{ needs.version-validation.outputs.reason }}. Release reverted to draft and tag removed."; exit 1;
 
-      - name: "📤 Export version outputs"
-        id: out
-        shell: bash
-        run: |
-          echo "version=${{ steps.tagver.outputs.package }}" >> $GITHUB_OUTPUT
-          echo "prerelease=${{ steps.tagver.outputs.is_prerelease }}" >> $GITHUB_OUTPUT
-
-  # 2) Build and publish a container image to GHCR using the validated version.
+  # 3) Build and publish a container image to GHCR using the validated version.
   docker:
     name: "🐳 Build and publish Docker image (GHCR)"
     needs: version-validation
+    if: needs.version-validation.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -173,10 +260,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # 3) Publish the package to GitHub Packages (npm registry on GitHub).
+  # 4) Publish the package to GitHub Packages (npm registry on GitHub).
   npm-GH:
     name: "📦 Publish to GitHub Packages (npm)"
-    needs: [version-validation]
+    needs: version-validation
+    if: needs.version-validation.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -212,10 +300,11 @@ jobs:
             npm publish --tag latest
           fi
 
-  # 4) Publish the package to npmjs.com (public npm registry).
+  # 5) Publish the package to npmjs.com (public npm registry).
   npm-JS:
     name: "📦 Publish to npmjs.com (npm)"
     needs: version-validation
+    if: needs.version-validation.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -229,8 +318,6 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-
-      # - run: npm ci
 
       - name: "🥖 Set up Bun"
         uses: oven-sh/setup-bun@v2

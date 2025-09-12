@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import app from "./index";
+import app from "./app";
 
 describe("Hono App", () => {
   it("should return Hello Hono!", async () => {

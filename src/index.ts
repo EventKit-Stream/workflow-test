@@ -1,9 +1,9 @@
-import { Hono } from 'hono'
+import { websocket } from "hono/bun";
 
-const app = new Hono()
+import app from "./app";
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
-
-export default app
+export default {
+  port: 3000,
+  fetch: app.fetch,
+  websocket,
+};

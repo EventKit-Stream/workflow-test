@@ -1,23 +1,36 @@
-# Use the official Bun image
-FROM oven/bun:latest
+# Build stage
+FROM oven/bun:1.2-debian AS build
 
-# Set the working directory
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Install pnpm
+# RUN curl -fsSL https://get.pnpm.io/install.sh | sh -
+RUN bun install -g pnpm
 
-# Install dependencies
-RUN bun install
+# Copy dependencies
+COPY pnpm-lock.yaml package.json ./
 
-# Copy the source code
-COPY src/ ./src/
+# Build dependencies
+RUN pnpm install --frozen-lockfile --prod
 
-# Build the app (if needed)
-RUN bun run build
+# Copy source and compile
+COPY . .
 
-# Expose the port
-EXPOSE 3000
+# RUN bun build
+RUN bun build --compile --minify --sourcemap ./src --outfile hono-docker-app
 
-# Run the app
-CMD ["bun", "run", "dev"]
+# Our application runner
+FROM gcr.io/distroless/base-debian12:nonroot AS runner
+
+ENV NODE_ENV=production
+
+ARG BUILD_APP_PORT=3000
+ENV APP_PORT=${BUILD_APP_PORT}
+EXPOSE ${APP_PORT}
+
+WORKDIR /app
+
+# Copy the compiled executable from the build stage
+COPY --from=build /app/hono-docker-app .
+
+ENTRYPOINT ["./hono-docker-app"]

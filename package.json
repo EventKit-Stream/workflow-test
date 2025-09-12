@@ -1,6 +1,6 @@
 {
   "name": "@eventkit-stream/testing-workflows",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A simple workflow testing project using Bun and Hono",
   "keywords": [],
   "homepage": "https://github.com/eventkit/eventkit-stream",
@@ -8,7 +8,7 @@
     "url": "https://github.com/eventkit/eventkit-stream/issues",
     "email": "support@example.com"
   },
-  "license": "SEE LICENSE IN LICENSE.md",
+  "license": "AGPL-3.0-or-later",
   "funding": [
     {
       "type": "Ko-Fi",
@@ -28,28 +28,35 @@
   },
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-    "build": "bunx tsc",
-    "lint": "bunx eslint .",
-    "lint:fix": "bunx eslint . --fix",
-    "test": "bunx vitest"
+    "build": "tsc",
+    "pack": "tsc && pnpm pack",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src client --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "test": "vitest"
   },
-
-  "main": "dist/index.js",
-  "files": [
-    "dist"
-  ],
   "type": "module",
+  "main": "dist/client/index.js",
+  "types": "dist/client/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js"
+    }
+  },
+  "files": [
+    "dist/client"
+  ],
   "dependencies": {
-    "hono": "^4.9.6"
+    "hono": "^4.9.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@types/bun": "latest",
-    "@types/node": "^24.3.1",
     "eslint": "^9.35.0",
-    "eslint-plugin-drizzle": "^0.2.3",
     "eslint-plugin-perfectionist": "^4.15.0",
     "typescript-eslint": "^8.43.0",
-    "vitest": "^1.6.1"
+    "vitest": "^3.2.4"
   }
 }

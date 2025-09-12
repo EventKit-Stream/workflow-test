@@ -231,7 +231,7 @@ jobs:
 
       - name: Publish package
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN2 }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
             npm publish --provenance --access public --tag next

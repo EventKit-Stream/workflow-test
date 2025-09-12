@@ -45,8 +45,7 @@ jobs:
   rollback-target-check:
     name: "⏪ Rollback target/check mismatch"
     needs: target-check
-    # if: needs.target-check.result == 'failure'
-    if: failure()
+    if: failure() && needs.target-check.result == 'failure'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -174,8 +173,7 @@ jobs:
   rollback-version-validation:
     name: "⏪ Rollback version validation mismatch"
     needs: version-validation
-    # if: needs.version-validation.result == 'failure'
-    if: failure()
+    if: failure() && needs.version-validation.result == 'failure'
     runs-on: ubuntu-latest
     permissions:
       contents: write

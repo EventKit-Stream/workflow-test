@@ -21,7 +21,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eventkit-stream/workflow-test.git"
+    "url": "https://github.com/EventKit-Stream/worklow-test"
   },
   "publishConfig": {
     "access": "public",

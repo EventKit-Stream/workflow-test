@@ -50,6 +50,7 @@
     "dist/client"
   ],
   "dependencies": {
+    "@eventkit-stream/workflow-test": "^0.0.16",
     "hono": "^4.9.7"
   },
   "devDependencies": {

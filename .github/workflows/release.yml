@@ -167,42 +167,42 @@ jobs:
   #         cache-from: type=gha
   #         cache-to: type=gha,mode=max
 
-  # npm-GH:
-  #   name: Publish GitHub Package (npm)
-  #   needs: [version-validation, npm-JS]
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #     packages: write
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+  npm-GH:
+    name: Publish GitHub Package (npm)
+    needs: [version-validation, npm-JS]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  #     - name: Setup Node.js for npm publish
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         registry-url: 'https://npm.pkg.github.com'
-  #         scope: '@eventkit-stream'
+      - name: Setup Node.js for npm publish
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@eventkit-stream'
 
-  #     - name: Setup Bun
-  #       uses: oven-sh/setup-bun@v2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
-  #     - name: Install deps
-  #       run: bun install
+      - name: Install deps
+        run: bun install
 
-  #     - name: Build package
-  #       run: bun run build
+      - name: Build package
+        run: bun run build
 
-  #     - name: Publish package
-  #       env:
-  #         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       run: |
-  #         if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
-  #           npm publish --tag next
-  #         else
-  #           npm publish --tag latest
-  #         fi
+      - name: Publish package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
+            npm publish --tag next
+          else
+            npm publish --tag latest
+          fi
 
   npm-JS:
     name: Publish npmJs Package (npm)

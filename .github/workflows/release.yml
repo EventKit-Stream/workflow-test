@@ -261,79 +261,79 @@ jobs:
           cache-to: type=gha,mode=max
 
   # 4) Publish the package to GitHub Packages (npm registry on GitHub).
-  npm-GH:
-    name: "📦 Publish to GitHub Packages (npm)"
-    needs: version-validation
-    if: needs.version-validation.result == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-      packages: write
-    steps:
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
-
-      - name: "🟢 Use Node.js 20 (GitHub Packages)"
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@eventkit-stream'
-
-      - name: "🥖 Set up Bun"
-        uses: oven-sh/setup-bun@v2
-
-      - name: "📦 Install dependencies"
-        run: bun install
-
-      - name: "🛠️ Build package"
-        run: bun run build
-
-      - name: "🚀 Publish to GitHub Packages"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
-            npm publish --tag next
-          else
-            npm publish --tag latest
-          fi
-
+#   npm-GH:
+#     name: "📦 Publish to GitHub Packages (npm)"
+#     needs: version-validation
+#     if: needs.version-validation.result == 'success'
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: read
+#       id-token: write
+#       packages: write
+#     steps:
+#       - name: "📥 Checkout repository"
+#         uses: actions/checkout@v4
+# 
+#       - name: "🟢 Use Node.js 20 (GitHub Packages)"
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: '20'
+#           registry-url: 'https://npm.pkg.github.com'
+#           scope: '@eventkit-stream'
+# 
+#       - name: "🥖 Set up Bun"
+#         uses: oven-sh/setup-bun@v2
+# 
+#       - name: "📦 Install dependencies"
+#         run: bun install
+# 
+#       - name: "🛠️ Build package"
+#         run: bun run build
+# 
+#       - name: "🚀 Publish to GitHub Packages"
+#         env:
+#           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#         run: |
+#           if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
+#             npm publish --tag next
+#           else
+#             npm publish --tag latest
+#           fi
+# 
   # 5) Publish the package to npmjs.com (public npm registry).
-  npm-JS:
-    name: "📦 Publish to npmjs.com (npm)"
-    needs: version-validation
-    if: needs.version-validation.result == 'success'
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: "📥 Checkout repository"
-        uses: actions/checkout@v4
-
-      - name: "🟢 Use Node.js 20 (npmjs)"
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: "🥖 Set up Bun"
-        uses: oven-sh/setup-bun@v2
-
-      - name: "📦 Install dependencies"
-        run: bun install
-
-      - name: "🛠️ Build package"
-        run: bun run build
-
-      - name: "🚀 Publish to npm registry (npmjs.com)"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
-            npm publish --provenance --access public --tag next
-          else
-            npm publish --provenance --access public --tag latest
-          fi
+#   npm-JS:
+#     name: "📦 Publish to npmjs.com (npm)"
+#     needs: version-validation
+#     if: needs.version-validation.result == 'success'
+#     runs-on: ubuntu-latest
+#     permissions:
+#       id-token: write
+#       contents: read
+#     steps:
+#       - name: "📥 Checkout repository"
+#         uses: actions/checkout@v4
+# 
+#       - name: "🟢 Use Node.js 20 (npmjs)"
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: '20'
+#           registry-url: 'https://registry.npmjs.org'
+# 
+#       - name: "🥖 Set up Bun"
+#         uses: oven-sh/setup-bun@v2
+# 
+#       - name: "📦 Install dependencies"
+#         run: bun install
+# 
+#       - name: "🛠️ Build package"
+#         run: bun run build
+# 
+#       - name: "🚀 Publish to npm registry (npmjs.com)"
+#         env:
+#           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+#         run: |
+#           if [[ "${{ needs.version-validation.outputs.prerelease }}" == "true" ]]; then
+#             npm publish --provenance --access public --tag next
+#           else
+#             npm publish --provenance --access public --tag latest
+#           fi

@@ -2,7 +2,7 @@ name: "✅ PR Checks: Lint, Test, Version"
 
 on:
   pull_request:
-    branches: [ develop ]
+    branches: [ main ]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 

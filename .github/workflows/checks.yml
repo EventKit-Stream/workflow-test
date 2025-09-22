@@ -3,7 +3,8 @@ name: "✅ PR Checks: Lint, Test, Version"
 on:
   pull_request:
     branches: [ main ]
-    types: [opened, synchronize, reopened]
+  merge_group:
+    types: [ checks_requested ]
   workflow_dispatch:
 
 concurrency:

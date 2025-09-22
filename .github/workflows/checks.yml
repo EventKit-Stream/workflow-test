@@ -7,6 +7,11 @@ on:
   merge_group:
     # types: [ checks_requested ]
   workflow_dispatch:
+    inputs:
+      run-version-check:
+        description: 'Test if the Version is valid'
+        required: true
+        type: boolean
 
 concurrency:
   group: checks-${{ github.event.pull_request.head.sha || github.sha }}
@@ -50,7 +55,8 @@ jobs:
   # Ensure package.json version was bumped in PRs when relevant.
   version-check:
     name: "🏷️ Version bump check"
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name != 'workflow_dispatch' || 
+      inputs.run-version-check
     runs-on: ubuntu-latest
     permissions:
       contents: read

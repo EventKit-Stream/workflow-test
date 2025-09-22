@@ -3,6 +3,7 @@ name: "✅ PR Checks: Lint, Test, Version"
 on:
   pull_request:
     branches: [ main ]
+    types: [opened, synchronize, reopened]
   merge_group:
     types: [ checks_requested ]
   workflow_dispatch:
@@ -49,6 +50,7 @@ jobs:
   # Ensure package.json version was bumped in PRs when relevant.
   version-check:
     name: "🏷️ Version bump check"
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
